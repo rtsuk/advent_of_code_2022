@@ -43,7 +43,7 @@ fn main() {
     let elves = make_elves(PART1_DATA);
     println!("best elf = {} cal {}", elves[0].index, elves[0].count);
 
-    let top_3 :u32 = elves[0..3].iter().map(|e| e.count).sum();
+    let top_3: u32 = elves[0..3].iter().map(|e| e.count).sum();
     println!("top 3 = {}", top_3);
 }
 
