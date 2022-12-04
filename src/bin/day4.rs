@@ -1,6 +1,6 @@
-use std::ops::Range;
+use std::ops::RangeInclusive;
 
-type Asssignment = Range<usize>;
+type Asssignment = RangeInclusive<usize>;
 
 #[derive(Debug)]
 struct Elf {
@@ -9,17 +9,13 @@ struct Elf {
 
 impl Elf {
     pub fn contains(&self, other: &Elf) -> bool {
-        self.assignment.start <= other.assignment.start
-            && self.assignment.end >= other.assignment.end
+        self.assignment.start() <= other.assignment.start()
+            && self.assignment.end() >= other.assignment.end()
     }
 
     pub fn overlaps(&self, other: &Elf) -> bool {
-        if self.assignment.contains(&other.assignment.start) {
-            return true;
-        }
-
-        let other_last = other.assignment.end - 1;
-        self.assignment.contains(&other_last)
+        self.assignment.contains(other.assignment.start())
+            || self.assignment.contains(other.assignment.end())
     }
 }
 
@@ -29,7 +25,7 @@ impl From<&str> for Elf {
         let start = range_limits.next().expect("start");
         let inclusive_end = range_limits.next().expect("inclusive_end");
         Self {
-            assignment: start..inclusive_end + 1,
+            assignment: start..=inclusive_end,
         }
     }
 }
@@ -73,11 +69,7 @@ fn count_fully_contained_pairs(pairs: &[ElfPair]) -> usize {
 }
 
 fn count_overlapping_pairs(pairs: &[ElfPair]) -> usize {
-    pairs
-        .iter()
-        .map(ElfPair::overlaps)
-        .map(usize::from)
-        .sum()
+    pairs.iter().map(ElfPair::overlaps).map(usize::from).sum()
 }
 
 const DATA: &str = include_str!("../../data/day4.txt");
@@ -106,16 +98,16 @@ mod test {
         let pairs = parse_pairs(SAMPLE);
         assert_eq!(pairs.len(), 6);
         let first_pair = &pairs[0];
-        assert_eq!(first_pair.first.assignment, 2..5);
-        assert_eq!(first_pair.second.assignment, 6..9);
+        assert_eq!(first_pair.first.assignment, 2..=4);
+        assert_eq!(first_pair.second.assignment, 6..=8);
 
         let pen_pair = &pairs[4];
-        assert_eq!(pen_pair.first.assignment, 6..7);
-        assert_eq!(pen_pair.second.assignment, 4..7);
+        assert_eq!(pen_pair.first.assignment, 6..=6);
+        assert_eq!(pen_pair.second.assignment, 4..=6);
 
         let last_pair = &pairs[5];
-        assert_eq!(last_pair.first.assignment, 2..7);
-        assert_eq!(last_pair.second.assignment, 4..9);
+        assert_eq!(last_pair.first.assignment, 2..=6);
+        assert_eq!(last_pair.second.assignment, 4..=8);
     }
 
     #[test]
