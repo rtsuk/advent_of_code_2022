@@ -38,8 +38,6 @@ impl<const N: usize> Scanner<N> {
     }
 }
 
-
-
 fn main() {
     let received_count = Scanner::<4>::run_scanner(DATA);
     println!("characters processed = {:?}", received_count);
