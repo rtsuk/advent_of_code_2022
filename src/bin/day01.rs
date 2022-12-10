@@ -37,7 +37,7 @@ fn make_elves(input_data: &str) -> ElfList {
     counts
 }
 
-const PART1_DATA: &str = include_str!("../../data/day1_part1.txt");
+const PART1_DATA: &str = include_str!("../../data/day01.txt");
 
 fn main() {
     let elves = make_elves(PART1_DATA);

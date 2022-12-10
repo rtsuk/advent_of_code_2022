@@ -57,7 +57,7 @@ impl From<Direction> for Vector {
 
 type MoveList = Vec<Move>;
 
-const DATA: &str = include_str!("../../data/day9.txt");
+const DATA: &str = include_str!("../../data/day09.txt");
 
 fn parse(s: &str) -> MoveList {
     s.lines().map(Move::from).collect()

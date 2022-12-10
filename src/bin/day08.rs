@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-const DATA: &str = include_str!("../../data/day8.txt");
+const DATA: &str = include_str!("../../data/day08.txt");
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 struct TreePosition {

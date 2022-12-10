@@ -1,6 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 
-const DATA: &str = include_str!("../../data/day6.txt");
+const DATA: &str = include_str!("../../data/day06.txt");
 
 #[derive(Debug, Default)]
 struct Scanner<const N: usize> {

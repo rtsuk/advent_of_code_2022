@@ -72,7 +72,7 @@ fn count_overlapping_pairs(pairs: &[ElfPair]) -> usize {
     pairs.iter().map(ElfPair::overlaps).map(usize::from).sum()
 }
 
-const DATA: &str = include_str!("../../data/day4.txt");
+const DATA: &str = include_str!("../../data/day04.txt");
 
 fn main() {
     let pairs = parse_pairs(DATA);

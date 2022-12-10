@@ -1,4 +1,4 @@
-const PART1_DATA: &str = include_str!("../../data/day2.txt");
+const PART1_DATA: &str = include_str!("../../data/day02.txt");
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 enum Play {

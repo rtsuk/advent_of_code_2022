@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-const DATA: &str = include_str!("../../data/day3.txt");
+const DATA: &str = include_str!("../../data/day03.txt");
 
 fn as_priority(c: char, base_char: char, base_value: usize) -> usize {
     c as usize - base_char as usize + base_value

@@ -34,7 +34,7 @@ impl From<&str> for Line {
     }
 }
 
-const DATA: &str = include_str!("../../data/day7.txt");
+const DATA: &str = include_str!("../../data/day07.txt");
 
 fn collect_lines(lines: &[Line]) -> (BTreeSet<String>, BTreeMap<String, usize>) {
     let mut directory_stack: Vec<String> = vec![];
