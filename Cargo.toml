@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 euclid = { version = "0.22.7", features = ["serde"] }
+num-bigint = "0.4.3"
+num-traits = "0.2.15"
+numtraits = "0.0.1"
