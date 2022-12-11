@@ -1,9 +1,6 @@
 const DATA: &str = include_str!("../../data/day11.txt");
 
-use num_bigint::BigUint;
-use num_traits::Zero;
-
-type WorryValue = BigUint;
+type WorryValue = usize;
 
 fn monkey_label(s: Option<&str>) -> Option<usize> {
     s?.chars()
@@ -148,7 +145,7 @@ impl Monkey {
     fn decrease_worry(&mut self) {
         self.items
             .iter_mut()
-            .for_each(|item| *item = item.clone() / 3 as u32);
+            .for_each(|item| *item = *item / 3 );
     }
 
     fn inspect_items(&mut self) -> Vec<Throw> {
@@ -159,16 +156,16 @@ impl Monkey {
         let (for_true_target, for_false_target): (Vec<_>, Vec<_>) = self
             .items
             .iter()
-            .partition(|item| *item % test_divisor.clone() == BigUint::zero());
+            .partition(|item| (*item % test_divisor.clone()) == 0);
         let thrown_items: Vec<Throw> = for_true_target
             .iter()
             .map(|item| Throw {
                 target: true_target,
-                item: (*item).clone(),
+                item: *item,
             })
             .chain(for_false_target.iter().map(|item| Throw {
                 target: false_target,
-                item: (*item).clone(),
+                item: *item,
             }))
             .collect();
 
@@ -237,7 +234,9 @@ fn main() {
     println!("monkey_business = {}", monkey_business);
 
     for round in 0..10_000 {
-        println!("round {}", round);
+        if round % 100 == 0 {
+            println!("round {}", round)
+        }
         execute_round_with_worry(&mut second_monkeys, false);
     }
 
@@ -386,7 +385,23 @@ Monkey 3:
     #[test]
     fn test_part2() {
         let mut monkeys = parse(SAMPLE);
-        for _ in 0..10_000 {
+        execute_round_with_worry(&mut monkeys, false);
+
+        assert_eq!(monkeys[0].inspection_count, 2);
+        assert_eq!(monkeys[1].inspection_count, 4);
+        assert_eq!(monkeys[2].inspection_count, 3);
+        assert_eq!(monkeys[3].inspection_count, 6);
+
+        for _ in 1..20 {
+            execute_round_with_worry(&mut monkeys, false);
+        }
+
+        assert_eq!(monkeys[0].inspection_count, 99);
+        assert_eq!(monkeys[1].inspection_count, 97);
+        assert_eq!(monkeys[2].inspection_count, 8);
+        assert_eq!(monkeys[3].inspection_count, 103);
+
+        for _ in 21..10_000 {
             execute_round_with_worry(&mut monkeys, false);
         }
 
