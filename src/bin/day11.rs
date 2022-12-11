@@ -423,7 +423,7 @@ Monkey 3:
         assert_eq!(monkeys[2].inspection_count, 8);
         assert_eq!(monkeys[3].inspection_count, 103);
 
-        for _ in 21..10_000 {
+        for _ in 20..10_000 {
             execute_round_with_worry(&mut monkeys, false);
         }
 
