@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 euclid = { version = "0.22.7", features = ["serde"] }
+nom = "7.1.1"
 pathfinding = "4.0.0"

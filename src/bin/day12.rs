@@ -34,7 +34,7 @@ impl Direction {
             Self::East => from + vec2(1, 0),
             Self::West => from + vec2(-1, 0),
         };
-        bounds.contains(p).then(|| p)
+        bounds.contains(p).then_some(p)
     }
 }
 
@@ -48,8 +48,8 @@ enum Element {
 impl Element {
     fn elevation(&self) -> usize {
         match self {
-            Self::Start => 0,
-            Self::End => 26,
+            Self::Start => height_value('a'),
+            Self::End => height_value('z'),
             Self::Height(v) => *v,
         }
     }
@@ -102,12 +102,12 @@ impl Map {
         self.data[p.y as usize][p.x as usize]
     }
 
-    fn render_result(&self, result: &Vec<Position>) -> String {
+    fn render_result(&self, result: &Vec<Position>, data: &str) -> String {
         let mut lines = vec![];
-        for _ in 0..self.bounds.size.height {
+        for line in data.lines() {
             let mut s = vec![];
-            for _ in 0..self.bounds.size.width {
-                s.push('.');
+            for c in line.chars() {
+                s.push(c);
             }
             lines.push(s);
         }
@@ -135,7 +135,11 @@ struct Position {
 }
 
 impl Position {
-    fn successors(&self) -> Vec<Position> {
+    fn distance(&self) -> u32 {
+        (self.point - self.map.borrow().end).square_length() as u32
+    }
+
+    fn successors(&self) -> Vec<(Position, u32)> {
         let map_ptr = self.map.clone();
         let map = self.map.borrow();
         let element = map.get_element(&self.point);
@@ -143,23 +147,31 @@ impl Position {
         let mut suc = vec![];
         for d in [
             Direction::North,
-            Direction::South,
             Direction::East,
+            Direction::South,
             Direction::West,
         ] {
             if let Some(p) = d.in_direction(self.point, &map.bounds) {
                 let new_element = map.get_element(&p);
                 //println!("p = {:?} e = {:?}", p, new_element);
                 if element.is_legal_from(&new_element) {
-                    suc.push(Position {
+                    let pos = Position {
                         map: map_ptr.clone(),
                         point: p,
-                    });
+                    };
+                    let dis = pos.distance();
+                    suc.push((
+                        Position {
+                            map: map_ptr.clone(),
+                            point: p,
+                        },
+                        dis,
+                    ));
                 }
             }
         }
         // for s in &suc {
-        //     println!("p = {:?}", s.point);
+        //     println!("p = {:?}", s.0.point);
         // }
         suc
     }
@@ -216,28 +228,34 @@ fn parse(s: &str) -> Map {
     }
 }
 
-fn find_path(map: Map) -> Vec<Position> {
-    let start = map.start;
-    let end = map.end;
+fn find_path(map: MapPtr) -> Vec<Position> {
+    let start = map.borrow().start;
+    let end = map.borrow().end;
 
-    let map = Rc::new(RefCell::new(map));
+    println!("start = {:?}", start);
+    println!("end = {:?}", end);
 
     let position = Position {
-        map: map,
+        map,
         point: start,
     };
-    let result = dfs(position, |p| p.successors(), |p| p.point == end).unwrap();
-    result
+    let (result, _) = astar_bag_collect(
+        &position,
+        |p| p.successors(),
+        |p| p.distance(),
+        |p| p.point == end,
+    )
+    .unwrap();
+    for r in &result {
+        println!("result len = {}", r.len());
+    }
+    result[0].clone()
 }
 
 fn main() {
-    let map = parse(DATA);
-    let map2 = map.clone();
-    println!("start = {:?}", map.start);
-    println!("end = {:?}", map.end);
-    let result = find_path(map);
-    println!("{:#?}", result);
-    println!("{}", map2.render_result(&result));
+    let map = Rc::new(RefCell::new(parse(DATA)));
+    let result = find_path(map.clone());
+    println!("{}", map.borrow().render_result(&result, DATA));
     println!("fewest steps = {}", result.len() - 1);
 }
 
@@ -270,16 +288,10 @@ abdefghi"#;
     fn test_part1() {
         let map = parse(SAMPLE);
 
-        let start = map.start;
-        let end = map.end;
-
         let map = Rc::new(RefCell::new(map));
 
-        let position = Position {
-            map: map.clone(),
-            point: start,
-        };
-        let result = dijkstra(&position, |p| p.successors(), |p| p.point == end).unwrap();
+        let result = find_path(map.clone());
+
         println!("result = {:?}", result);
         let s = map.borrow().render_result(&result);
         println!("{}", s);
