@@ -102,12 +102,30 @@ impl Map {
         self.data[p.y as usize][p.x as usize]
     }
 
+    fn all_elevation_a(&self) -> Vec<Point> {
+        let mut all = vec![];
+        for y in 0..self.bounds.size.height {
+            for x in 0..self.bounds.size.width {
+                let p = point2(x, y);
+                let e = self.get_element(&p);
+                if e.elevation() == 0 {
+                    all.push(p);
+                }
+            }
+        }
+        all
+    }
+
     fn render_result(&self, result: &Vec<Position>, data: &str) -> String {
         let mut lines = vec![];
         for line in data.lines() {
             let mut s = vec![];
             for c in line.chars() {
-                s.push(c);
+                if c == 'E' {
+                    s.push('E');
+                } else {
+                    s.push('.');
+                }
             }
             lines.push(s);
         }
@@ -135,15 +153,10 @@ struct Position {
 }
 
 impl Position {
-    fn distance(&self) -> u32 {
-        (self.point - self.map.borrow().end).square_length() as u32
-    }
-
-    fn successors(&self) -> Vec<(Position, u32)> {
+    fn successors_bfs(&self) -> Vec<Position> {
         let map_ptr = self.map.clone();
         let map = self.map.borrow();
         let element = map.get_element(&self.point);
-        //println!("from p = {:?} e = {:?}", self.point, element);
         let mut suc = vec![];
         for d in [
             Direction::North,
@@ -153,26 +166,14 @@ impl Position {
         ] {
             if let Some(p) = d.in_direction(self.point, &map.bounds) {
                 let new_element = map.get_element(&p);
-                //println!("p = {:?} e = {:?}", p, new_element);
                 if element.is_legal_from(&new_element) {
-                    let pos = Position {
+                    suc.push(Position {
                         map: map_ptr.clone(),
                         point: p,
-                    };
-                    let dis = pos.distance();
-                    suc.push((
-                        Position {
-                            map: map_ptr.clone(),
-                            point: p,
-                        },
-                        dis,
-                    ));
+                    });
                 }
             }
         }
-        // for s in &suc {
-        //     println!("p = {:?}", s.0.point);
-        // }
         suc
     }
 }
@@ -228,35 +229,35 @@ fn parse(s: &str) -> Map {
     }
 }
 
-fn find_path(map: MapPtr) -> Vec<Position> {
-    let start = map.borrow().start;
+fn find_path_bfs_start(map: MapPtr, start: Point) -> Vec<Position> {
     let end = map.borrow().end;
 
-    println!("start = {:?}", start);
-    println!("end = {:?}", end);
+    let position = Position { map, point: start };
+    bfs(&position, |p| p.successors_bfs(), |p| p.point == end).unwrap_or_default()
+}
 
-    let position = Position {
-        map,
-        point: start,
-    };
-    let (result, _) = astar_bag_collect(
-        &position,
-        |p| p.successors(),
-        |p| p.distance(),
-        |p| p.point == end,
-    )
-    .unwrap();
-    for r in &result {
-        println!("result len = {}", r.len());
-    }
-    result[0].clone()
+fn find_path_bfs(map: MapPtr) -> Vec<Position> {
+    let start = map.borrow().start;
+    find_path_bfs_start(map, start)
 }
 
 fn main() {
     let map = Rc::new(RefCell::new(parse(DATA)));
-    let result = find_path(map.clone());
+    let result = find_path_bfs(map.clone());
     println!("{}", map.borrow().render_result(&result, DATA));
     println!("fewest steps = {}", result.len() - 1);
+
+    let elevation_a = map.borrow().all_elevation_a();
+
+    let mut all_solutions: Vec<_> = elevation_a
+        .iter()
+        .map(|p| find_path_bfs_start(map.clone(), *p))
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    all_solutions.sort_by_key(|a| a.len());
+    println!("part 2 = {}", all_solutions[0].len() - 1);
+    println!("{}", map.borrow().render_result(&all_solutions[0], DATA));
 }
 
 #[cfg(test)]
@@ -269,12 +270,6 @@ abcryxxl
 accszExk
 acctuvwj
 abdefghi"#;
-
-    const RESULT: &str = r#"v..v<<<<
->v.vv<<^
-.>vv>E^^
-..v>>>^^
-..>>>>>^"#;
 
     #[test]
     fn test_parse() {
@@ -290,18 +285,26 @@ abdefghi"#;
 
         let map = Rc::new(RefCell::new(map));
 
-        let result = find_path(map.clone());
+        let result = find_path_bfs(map.clone());
 
         println!("result = {:?}", result);
-        let s = map.borrow().render_result(&result);
-        println!("{}", s);
         assert_eq!(result.len() - 1, 31);
     }
 
     #[test]
-    #[ignore]
     fn test_part2() {
-        let _ = parse(SAMPLE);
-        todo!();
+        let map = parse(SAMPLE);
+
+        let elevation_a = map.all_elevation_a();
+
+        let map = Rc::new(RefCell::new(map));
+
+        let mut all_solutions: Vec<_> = elevation_a
+            .iter()
+            .map(|p| find_path_bfs_start(map.clone(), *p))
+            .collect();
+
+        all_solutions.sort_by(|a, b| a.len().cmp(&b.len()));
+        assert_eq!(all_solutions[0].len() - 1, 29);
     }
 }
