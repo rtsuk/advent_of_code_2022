@@ -87,7 +87,7 @@ fn find_badge(rucksacks: &[Rucksack]) -> char {
 fn main() {
     let rucksacks = parse_rucksacks(DATA);
     let sum = sum_rucksacks(&rucksacks);
-    println!("sum of the priorities = {}", sum);
+    println!("sum of the priorities = {sum}",);
 
     let mut priority = 0;
     for set in rucksacks.chunks(3) {
@@ -96,7 +96,7 @@ fn main() {
         priority += badge_item.priority();
     }
 
-    println!("sum of badge priorities = {}", priority);
+    println!("sum of badge priorities = {priority}");
 }
 
 #[cfg(test)]

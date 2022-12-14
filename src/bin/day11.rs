@@ -246,11 +246,11 @@ fn main() {
     monkeys.sort_by(|a, b| b.inspection_count.cmp(&a.inspection_count));
 
     let monkey_business = monkeys[0].inspection_count * monkeys[1].inspection_count;
-    println!("monkey_business = {}", monkey_business);
+    println!("monkey_business = {monkey_business}");
 
     for round in 0..10_000 {
         if round % 100 == 0 {
-            println!("round {}", round)
+            println!("round {round}")
         }
         execute_round_with_worry(&mut second_monkeys, false);
     }
@@ -258,7 +258,7 @@ fn main() {
     second_monkeys.sort_by(|a, b| b.inspection_count.cmp(&a.inspection_count));
 
     let monkey_business = second_monkeys[0].inspection_count * second_monkeys[1].inspection_count;
-    println!("monkey_business part2 = {}", monkey_business);
+    println!("monkey_business part2 = {monkey_business}");
 }
 
 #[cfg(test)]

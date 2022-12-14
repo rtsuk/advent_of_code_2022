@@ -73,7 +73,7 @@ fn find_sum_of_smalls(dirs: &BTreeSet<String>, files: &BTreeMap<String, usize>) 
         .iter()
         .filter_map(|dir_path| {
             let dir_with_delim = if dir_path != "/" {
-                format!("{}/", dir_path)
+                format!("{dir_path}/",)
             } else {
                 "/".to_string()
             };
@@ -107,7 +107,7 @@ fn find_candidates(
         .iter()
         .filter_map(|dir_path| {
             let dir_with_delim = if dir_path != "/" {
-                format!("{}/", dir_path)
+                format!("{dir_path}/")
             } else {
                 "/".to_string()
             };
@@ -139,14 +139,14 @@ fn main() {
     let lines: Vec<_> = DATA.lines().map(Line::from).collect();
     let (dirs, files) = collect_lines(&lines);
     let total = find_sum_of_smalls(&dirs, &files);
-    println!("total of smalls = {}", total);
+    println!("total of smalls = {total}");
 
     let used_size: usize = files.values().sum();
-    println!("used_size ={}", used_size);
+    println!("used_size ={used_size}");
     let free_size = CAPACITY - used_size;
-    println!("free_size ={}", free_size);
+    println!("free_size ={free_size}");
     let target_min_size = SPACE_NEEDED - free_size;
-    println!("target_min_size ={}", target_min_size);
+    println!("target_min_size ={target_min_size}");
 
     let mut candidates = find_candidates(&dirs, &files, target_min_size);
     candidates.sort();

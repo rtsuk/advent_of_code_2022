@@ -77,9 +77,9 @@ const DATA: &str = include_str!("../../data/day04.txt");
 fn main() {
     let pairs = parse_pairs(DATA);
     let fully = count_fully_contained_pairs(&pairs);
-    println!("assignment pairs = {}", fully);
+    println!("assignment pairs = {fully}");
     let overlap = count_overlapping_pairs(&pairs);
-    println!("overlap pairs = {}", overlap);
+    println!("overlap pairs = {overlap}");
 }
 
 #[cfg(test)]

@@ -40,10 +40,10 @@ impl<const N: usize> Scanner<N> {
 
 fn main() {
     let received_count = Scanner::<4>::run_scanner(DATA);
-    println!("characters processed = {:?}", received_count);
+    println!("characters processed = {received_count:?}");
 
     let received_count = Scanner::<14>::run_scanner(DATA);
-    println!("characters processed = {:?}", received_count);
+    println!("characters processed = {received_count:?}");
 }
 
 #[cfg(test)]

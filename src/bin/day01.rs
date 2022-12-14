@@ -44,7 +44,7 @@ fn main() {
     println!("best elf = {} cal {}", elves[0].index, elves[0].count);
 
     let top_3: u32 = elves[0..3].iter().map(|e| e.count).sum();
-    println!("top 3 = {}", top_3);
+    println!("top 3 = {top_3}");
 }
 
 #[cfg(test)]

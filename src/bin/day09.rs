@@ -129,9 +129,9 @@ fn execute_moves<const T: usize>(moves: &MoveList) -> usize {
 fn main() {
     let moves = parse(DATA);
     let positions = execute_moves::<2>(&moves);
-    println!("How many positions  = {}", positions);
+    println!("How many positions  = {positions}",);
     let positions = execute_moves::<10>(&moves);
-    println!("How many positions(10)  = {}", positions);
+    println!("How many positions(10)  = {positions}",);
 }
 
 #[cfg(test)]

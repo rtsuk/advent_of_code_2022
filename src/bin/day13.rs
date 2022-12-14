@@ -76,7 +76,7 @@ impl Ord for Packet {
 
 impl From<&str> for Packet {
     fn from(s: &str) -> Self {
-        println!("Packet::from {}", s);
+        println!("Packet::from {s}");
         if s.starts_with('[') {
             let contents = &s[1..s.len() - 1];
             let packets = contents.split(',').map(Packet::from).collect();
@@ -140,14 +140,14 @@ fn main() {
         .enumerate()
         .filter_map(|(i, p)| p.is_ordered().then_some(i + 1))
         .collect();
-    println!("correct_indices = {:?}", correct_indices);
+    println!("correct_indices = {correct_indices:?}");
     println!(
         "correct_indices sum = {}",
         correct_indices.iter().sum::<usize>()
     );
 
     let marker_values = calculate_marker_value(DATA);
-    println!("marker_values = {}", marker_values);
+    println!("marker_values = {marker_values}");
 }
 
 #[cfg(test)]

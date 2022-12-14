@@ -144,7 +144,7 @@ fn main() {
             }
         }
     }
-    println!("best_scenic_score = {}", best_scenic_score);
+    println!("best_scenic_score = {best_scenic_score}");
 }
 
 #[cfg(test)]

@@ -157,12 +157,12 @@ fn calculate_score(turns: Vec<Turn>) -> usize {
 fn main() {
     let turns: Vec<_> = parse_input(PART1_DATA);
     let score = calculate_score(turns);
-    println!("score = {}", score);
+    println!("score = {score}");
 
     let turns: Vec<_> = parse_input_2(PART1_DATA);
     let turns = make_turns(turns);
     let score = calculate_score(turns);
-    println!("score = {}", score);
+    println!("score = {score}");
 }
 
 #[cfg(test)]

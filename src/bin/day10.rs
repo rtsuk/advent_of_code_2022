@@ -107,7 +107,7 @@ fn main() {
     let program = parse(DATA);
 
     let targets: HashSet<_> = TARGET_CYCLES.iter().collect();
-    println!("targets  = {:?}", targets);
+    println!("targets  = {targets:?}");
 
     let mut cpu = Cpu::new(program.clone());
 
@@ -119,10 +119,10 @@ fn main() {
         }
         cpu.clock();
     }
-    println!("signal_strength_sum = {}", signal_strength_sum);
+    println!("signal_strength_sum = {signal_strength_sum}");
 
     let screen = draw_screen(&program);
-    println!("screen = {:#?}", screen);
+    println!("screen = {screen:#?}");
 }
 
 #[cfg(test)]
