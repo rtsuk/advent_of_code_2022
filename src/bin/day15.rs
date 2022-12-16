@@ -1,15 +1,14 @@
-#![allow(unused)]
-
 use anyhow::Error;
-use euclid::{point2, vec2};
+use euclid::point2;
+use ranges::{GenericRange, Ranges};
 use regex::Regex;
-use std::collections::{BTreeSet, HashSet};
+use std::ops::{Bound, RangeBounds, RangeInclusive};
 use structopt::StructOpt;
 
 type Coord = i128;
 type Point = euclid::default::Point2D<Coord>;
-type Vector = euclid::default::Vector2D<Coord>;
-type Box = euclid::default::Box2D<Coord>;
+
+type ImpossibleRange = RangeInclusive<Coord>;
 
 const DATA: &str = include_str!("../../data/day15.txt");
 const SAMPLE: &str = r#"Sensor at x=2, y=18: closest beacon is at x=-2, y=15
@@ -34,7 +33,6 @@ fn taxicab_distance(p: Point, q: Point) -> Coord {
 #[derive(Debug)]
 struct Sensor {
     location: Point,
-    closest: Point,
     distance: Coord,
 }
 
@@ -42,13 +40,19 @@ impl Sensor {
     fn new(location: Point, closest: Point) -> Self {
         Self {
             location,
-            closest,
             distance: taxicab_distance(location, closest),
         }
     }
 
-    fn impossible_location(&self, p: Point) -> bool {
-        taxicab_distance(self.location, p) <= self.distance
+    fn impossible_range(&self, y: Coord) -> Option<ImpossibleRange> {
+        let distance_to_row = (self.location.y - y).abs();
+        (distance_to_row < self.distance).then(|| {
+            let remaining = self.distance - distance_to_row;
+            let x = self.location.x;
+            let l_x = x - remaining;
+            let h_x = x + remaining;
+            l_x..=h_x
+        })
     }
 }
 
@@ -75,53 +79,47 @@ fn parse(s: &str) -> Vec<Sensor> {
         .collect()
 }
 
-fn impossible_locations(
+fn convert_to_inclusive_range(gr: &GenericRange<Coord>) -> ImpossibleRange {
+    let start = match gr.start_bound() {
+        Bound::Included(t) => *t,
+        _ => panic!("unhandled start bound"),
+    };
+    let end = match gr.end_bound() {
+        Bound::Excluded(t) => *t - 1,
+        Bound::Included(t) => *t,
+        _ => panic!("unhandled end bound"),
+    };
+    start..=end - 1
+}
+
+fn impossible_ranges_with_limit(
     row: Coord,
-    max: Option<Coord>,
-    include_beacons: bool,
+    limit: Option<Coord>,
     sensors: &[Sensor],
-) -> Vec<Point> {
-    let beacons: BTreeSet<_> = sensors
+) -> Vec<ImpossibleRange> {
+    let impossible_ranges: Vec<_> = sensors
         .iter()
-        .filter_map(|s| (s.closest.y == row).then_some(s.closest.x))
+        .filter_map(|sensor| sensor.impossible_range(row))
         .collect();
 
-    let mut sensor_extent = Box::default();
-    for sensor in sensors.iter() {
-        let p = sensor.location;
-        let d = sensor.distance;
-        let vecs: [Vector; 4] = [vec2(-d, 0), vec2(d, 0), vec2(0, d), vec2(0, -d)];
-        let points: Vec<_> = vecs.iter().map(|v| p + *v).collect();
-        let bounds = Box::from_points(points.iter());
-        sensor_extent = sensor_extent.union(&bounds);
+    let mut ranges = Ranges::new();
+    for range in impossible_ranges {
+        ranges.insert(range);
     }
 
-    let il: Vec<_> = sensors
+    if let Some(limit) = limit {
+        ranges = ranges.intersect(0..limit);
+    }
+
+    ranges
+        .as_slice()
         .iter()
-        .map(|sensor| {
-            let range = if let Some(max) = max {
-                0..max
-            } else {
-                sensor_extent.x_range()
-            };
-            range
-                .filter_map(|x| sensor.impossible_location(point2(x, row)).then_some(x))
-                .collect::<HashSet<_>>()
-        })
-        .collect();
+        .map(convert_to_inclusive_range)
+        .collect()
+}
 
-    let mut all_pos = BTreeSet::new();
-    for set in il.iter() {
-        all_pos.extend(set.iter().copied());
-    }
-
-    if !include_beacons {
-        for b in beacons.iter() {
-            all_pos.remove(b);
-        }
-    }
-
-    all_pos.iter().map(|x| point2(*x, row)).collect()
+fn impossible_ranges(row: Coord, sensors: &[Sensor]) -> Vec<ImpossibleRange> {
+    impossible_ranges_with_limit(row, None, sensors)
 }
 
 #[derive(Debug, StructOpt)]
@@ -138,20 +136,25 @@ struct Opt {
     max_x: Coord,
 }
 
+const FM: Coord = 4_000_000;
+
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
     let sensors = parse(if !opt.puzzle_input { SAMPLE } else { DATA });
 
-    let impossible_locs = impossible_locations(opt.row, None, false, &sensors);
-    println!("impossible_locations len = {}", impossible_locs.len());
+    let ranges = impossible_ranges(opt.row, &sensors);
+    assert_eq!(ranges.len(), 1);
+    let r1 = &ranges[0];
+    let len = r1.end() - r1.start() + 1;
+    println!("impossible_locations len = {len}");
 
     let limit = opt.max_x + 1;
     for y in 0..limit {
-        let impossible_locs = impossible_locations(y, Some(limit), true, &sensors);
-        println!("y = {y}, impossible_locs.len() = {}", impossible_locs.len());
-        if impossible_locs.len() != limit as usize {
-            println!("found one in row {y}");
+        let ranges = impossible_ranges_with_limit(y, Some(limit), &sensors);
+        if ranges.len() > 1 {
+            let x = ranges[1].start() - 1;
+            println!("found one in row {y}, col {x}, f = {}", x * FM + y);
             break;
         }
     }
@@ -162,7 +165,6 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use euclid::rect;
 
     #[test]
     fn test_parse() {
@@ -175,30 +177,45 @@ mod test {
         let sensors = parse(SAMPLE);
 
         let sensor = &sensors[0];
-        let distance = taxicab_distance(sensor.location, sensor.closest);
-        assert_eq!(distance, 7);
+        assert_eq!(sensor.distance, 7);
 
         let sensor = &sensors[4];
-        let distance = taxicab_distance(sensor.location, sensor.closest);
-        assert_eq!(distance, 4);
+        assert_eq!(sensor.distance, 4);
+    }
+
+    #[test]
+    fn test_impossible_range() {
+        let sensors = parse(SAMPLE);
+        let sensor = &sensors[6];
+        assert_eq!(sensor.location, point2(8, 7));
+        let r = sensor.impossible_range(10);
+        assert_eq!(r, Some(2..=14));
+        let r = sensor.impossible_range(4);
+        assert_eq!(r, Some(2..=14));
+        let r = sensor.impossible_range(5);
+        assert_eq!(r, Some(1..=15));
+
+        let ranges = impossible_ranges(11, &sensors);
+        assert_eq!(ranges.len(), 2);
+
+        let ranges = impossible_ranges(10, &sensors);
+        assert_eq!(ranges.len(), 1);
     }
 
     #[test]
     fn test_part_1() {
         let sensors = parse(SAMPLE);
-
-        let impossible_locs = impossible_locations(10, None, false, &sensors);
-        assert_eq!(impossible_locs.len(), 26);
+        let ranges = impossible_ranges(10, &sensors);
+        assert_eq!(ranges.len(), 1);
+        let r1 = &ranges[0];
+        let len = r1.end() - r1.start() + 1;
+        assert_eq!(len, 26);
     }
 
     #[test]
     fn test_part_2() {
         let sensors = parse(SAMPLE);
-        let impossible_locs = impossible_locations(10, Some(21), true, &sensors);
-        println!("row 10, impossible_locs = {:?}", impossible_locs);
-        assert_eq!(impossible_locs.len(), 21);
-        let impossible_locs = impossible_locations(11, Some(21), true, &sensors);
-        println!("row 11, impossible_locs = {:?}", impossible_locs);
-        assert_eq!(impossible_locs.len(), 20);
+        let ranges = impossible_ranges_with_limit(11, Some(21), &sensors);
+        assert_eq!(ranges.len(), 2);
     }
 }
