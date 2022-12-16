@@ -1,14 +1,7 @@
+use anyhow::Error;
 use euclid::{point2, vec2};
-use log::error;
-use pixels::{Error, Pixels, SurfaceTexture};
 use std::collections::HashMap;
 use structopt::StructOpt;
-use tiny_skia::{Color, FillRule, Paint, PathBuilder, Pixmap, Transform};
-use winit::dpi::LogicalSize;
-use winit::event::{Event, VirtualKeyCode};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::WindowBuilder;
-use winit_input_helper::WinitInputHelper;
 
 const DATA: &str = include_str!("../../data/day14.txt");
 const SAMPLE: &str = r#"498,4 -> 498,6 -> 496,6
@@ -95,33 +88,6 @@ impl RockFall {
         }
     }
 
-    fn render(&mut self, pixmap: &mut Pixmap) {
-        pixmap.fill(Color::BLACK);
-        let mut rock_paint = Paint::default();
-        rock_paint.set_color_rgba8(90, 90, 90, 255);
-        rock_paint.anti_alias = true;
-
-        let mut sand_paint = Paint::default();
-        sand_paint.set_color_rgba8(255, 195, 0, 255);
-        sand_paint.anti_alias = true;
-        let identity = Transform::from_scale(5.0, 5.0).post_translate(25.0, 25.0);
-
-        for (block, block_type) in self
-            .blocks
-            .iter()
-            .chain(self.falling_sand.as_ref().map(|p| (p, &Block::Sand)))
-        {
-            let p = *block - self.bounds.origin;
-            let r = tiny_skia::Rect::from_xywh(p.x as f32, p.y as f32, 1.0, 1.0).unwrap();
-            let path1 = PathBuilder::from_rect(r);
-            let paint = match block_type {
-                Block::Rock => &rock_paint,
-                Block::Sand => &sand_paint,
-            };
-            pixmap.fill_path(&path1, paint, FillRule::Winding, identity, None);
-        }
-    }
-
     fn step(&mut self) -> Option<usize> {
         const DELTAS: &[Vector] = &[vec2(0, 1), vec2(-1, 1), vec2(1, 1)];
         if let Some(falling_sand) = self.falling_sand.as_mut() {
@@ -167,9 +133,6 @@ fn parse(s: &str) -> RockList {
         .collect()
 }
 
-const WIDTH: u32 = 1000;
-const HEIGHT: u32 = 1000;
-
 #[derive(Debug, StructOpt)]
 #[structopt(name = "day14", about = "Falling sand.")]
 struct Opt {
@@ -187,8 +150,6 @@ struct Opt {
 }
 
 fn main() -> Result<(), Error> {
-    env_logger::init();
-
     let opt = Opt::from_args();
 
     let rocklist = parse(if !opt.puzzle_input { SAMPLE } else { DATA });
@@ -203,61 +164,7 @@ fn main() -> Result<(), Error> {
             }
         }
     } else {
-        let event_loop = EventLoop::new();
-        let mut input = WinitInputHelper::new();
-        let window = {
-            let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-            WindowBuilder::new()
-                .with_title("Day 14")
-                .with_inner_size(size)
-                .with_min_inner_size(size)
-                .build(&event_loop)
-                .unwrap()
-        };
-
-        let mut pixels = {
-            let window_size = window.inner_size();
-            let surface_texture =
-                SurfaceTexture::new(window_size.width, window_size.height, &window);
-            Pixels::new(WIDTH, HEIGHT, surface_texture)?
-        };
-
-        let mut drawing = Pixmap::new(1000, 1000).unwrap();
-
-        event_loop.run(move |event, _, control_flow| {
-            if let Some(units) = rockfall.step() {
-                println!("units = {units}");
-            }
-            rockfall.render(&mut drawing);
-
-            if let Event::RedrawRequested(_) = event {
-                pixels.get_frame_mut().copy_from_slice(drawing.data());
-                if pixels
-                    .render()
-                    .map_err(|e| error!("pixels.render() failed: {}", e))
-                    .is_err()
-                {
-                    *control_flow = ControlFlow::Exit;
-                    return;
-                }
-            }
-
-            // Handle input events
-            if input.update(&event) {
-                // Close events
-                if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
-                    *control_flow = ControlFlow::Exit;
-                    return;
-                }
-
-                // Resize the window
-                if let Some(size) = input.window_resized() {
-                    pixels.resize_surface(size.width, size.height);
-                }
-
-                window.request_redraw();
-            }
-        });
+        todo!();
     }
 
     Ok(())

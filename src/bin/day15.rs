@@ -139,8 +139,6 @@ struct Opt {
 }
 
 fn main() -> Result<(), Error> {
-    env_logger::init();
-
     let opt = Opt::from_args();
 
     let sensors = parse(if !opt.puzzle_input { SAMPLE } else { DATA });
