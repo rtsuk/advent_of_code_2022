@@ -13,6 +13,7 @@ type Coord = u8;
 type Point = (Coord, Coord);
 
 const DATA: &str = include_str!("../../data/day16.txt");
+const EXAMPLE_SOLUTION: &str = include_str!("../../data/day16_example.txt");
 const SAMPLE: &str = r#"Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
 Valve BB has flow rate=13; tunnels lead to valves CC, AA
 Valve CC has flow rate=2; tunnels lead to valves DD, BB
@@ -69,7 +70,7 @@ impl Room {
 
 type RoomSet = BTreeMap<String, Room>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Action {
     Move(String),
     Open,
@@ -169,6 +170,64 @@ fn parse(s: &str) -> Volcano {
     Volcano::new("AA", rooms)
 }
 
+#[derive(Debug)]
+struct ExampleStep {
+    time: usize,
+    open_valves: Vec<String>,
+    pressure: usize,
+    action: Action,
+}
+
+impl From<&str> for ExampleStep {
+    fn from(s: &str) -> Self {
+        let parts = s.lines().map(str::trim).collect::<Vec<_>>();
+        let re = Regex::new(r"== Minute (\d+) ==").expect("regex");
+        let time = re.captures(parts[0]).expect("captures")[1]
+            .parse::<usize>()
+            .expect("usize");
+        let valve_info = parts[1];
+
+        let mut open_valves: Vec<String> = vec![];
+        let mut pressure;
+        let mut action = Action::Idle;
+
+        match valve_info {
+            "No valves are open." => {
+                pressure = 0;
+                open_valves = vec![];
+            }
+            _ => {
+                let re = Regex::new(r"[A-Z][A-Z]").expect("regex");
+                open_valves = re
+                    .captures_iter(valve_info)
+                    .map(|cap| cap[0].to_string())
+                    .collect();
+                let re = Regex::new(r"releasing (\d+) pressure").expect("regex");
+                pressure = re.captures(valve_info).expect("captures")[1]
+                    .parse::<usize>()
+                    .expect("usize");
+            }
+        }
+
+        if parts.len() > 2 {
+            let re = Regex::new(r"You ([a-z]+).*valve ([A-Z][A-Z]).").expect("re");
+            let captures = re.captures(parts[2]).expect("captures");
+            action = match &captures[1] {
+                "move" => Action::Move(captures[2].to_string()),
+                "open" => Action::Open,
+                _ => Action::Idle,
+            };
+        }
+
+        Self {
+            time,
+            open_valves,
+            pressure,
+            action,
+        }
+    }
+}
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "day15", about = "Beacon Exclusion Zone")]
 struct Opt {
@@ -207,6 +266,43 @@ mod test {
         let v = parse(SAMPLE);
         dbg!(&v);
         assert_eq!(v.rooms.len(), 10);
+    }
+
+    #[test]
+    fn test_example_solution() {
+        let example_steps: Vec<_> = EXAMPLE_SOLUTION
+            .split("\n\n")
+            .map(ExampleStep::from)
+            .collect();
+
+            assert_eq!(example_steps.len(), 30);
+            assert_eq!(example_steps[0].action, Action::Move("DD".to_string()));
+            assert_eq!(example_steps[0].pressure, 0);
+            assert_eq!(example_steps[0].open_valves.len(), 0);
+
+            let middle_step = &example_steps[17];
+            assert_eq!(middle_step.action, Action::Move("GG".to_string()));
+            assert_eq!(middle_step.pressure, 76);
+            assert_eq!(middle_step.open_valves.len(), 4);
+
+            let last_step = &example_steps[29];
+            assert_eq!(last_step.action, Action::Idle);
+            assert_eq!(last_step.pressure, 81);
+            assert_eq!(last_step.open_valves.len(), 6);
+
+            let mut v = parse(SAMPLE);
+
+            let mut total_pressure = 0;
+
+            for step in example_steps.iter() {
+                println!("doing step {:?}", step);
+                let current_flow = v.current_flow();
+                total_pressure += current_flow;
+                assert_eq!(step.pressure, v.current_flow());
+                v.do_action(&step.action);
+            }
+
+            assert_eq!(total_pressure, 1651);
     }
 
     #[test]
