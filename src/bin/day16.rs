@@ -9,7 +9,7 @@ use regex::Regex;
 use std::collections::BTreeMap;
 use structopt::StructOpt;
 
-type Coord = i128;
+type Coord = u8;
 type Point = (Coord, Coord);
 
 const DATA: &str = include_str!("../../data/day16.txt");
@@ -25,11 +25,18 @@ Valve II has flow rate=0; tunnels lead to valves AA, JJ
 Valve JJ has flow rate=21; tunnel leads to valve II"#;
 
 fn letter_code_to_point(s: &str) -> Point {
-    let values: Vec<_> = s.chars().map(|c| c as i128 - 'A' as i128).collect();
+    let values: Vec<_> = s.chars().map(|c| c as Coord - 'A' as Coord).collect();
     (values[0], values[1])
 }
 
-#[derive(Debug)]
+fn point_to_letter_code(p: Point) -> String {
+    [p.0, p.1]
+        .iter()
+        .map(|v| char::from(('A' as u8 + *v as u8)))
+        .collect::<String>()
+}
+
+#[derive(Debug, Clone)]
 struct Room {
     name: String,
     location: Point,
@@ -65,11 +72,11 @@ type RoomSet = BTreeMap<String, Room>;
 #[derive(Debug)]
 enum Action {
     Move(String),
-    Open(String),
+    Open,
     Idle,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 struct Volcano {
     rooms: RoomSet,
     graph: UnGraphMap<Point, ()>,
@@ -115,7 +122,35 @@ impl Volcano {
         let end = letter_code_to_point(end);
         println!("from {start:?} to {end:?}");
         let graph = self.graph.clone();
-        bfs(&start, |p| successors(p, &graph), |p| p == &end).unwrap_or_default()
+        let path = bfs(&start, |p| successors(p, &graph), |p| p == &end).unwrap();
+        path[1..].to_vec()
+    }
+
+    fn actions(&self, path: &Vec<Point>) -> Vec<Action> {
+        let mut actions = vec![];
+        for p in path.iter() {
+            let name = point_to_letter_code(*p);
+            let room = self.rooms.get(&name).expect("room");
+            actions.push(Action::Move(name.clone()));
+            if room.flow > 0 && !room.open {
+                actions.push(Action::Open);
+            }
+        }
+        actions
+    }
+
+    fn do_action(&mut self, action: &Action) {
+        match action {
+            Action::Move(target) => {
+                self.player_room = target.clone();
+            }
+            Action::Open => {
+                let room = self.rooms.get_mut(&self.player_room).expect("room");
+                println!("opening {room:?}");
+                room.open = true;
+            }
+            Action::Idle => (),
+        }
     }
 }
 
@@ -184,7 +219,6 @@ mod test {
             .filter(|r| !r.open)
             .max_by_key(|r| r.flow)
             .map(|r| r.name.to_string());
-        dbg!(&max_room);
 
         assert_eq!(Some("HH"), max_room.as_ref().map(String::as_str));
 
@@ -199,13 +233,30 @@ mod test {
             .filter(|r| !r.open)
             .max_by_key(|r| r.flow)
             .map(|r| r.name.to_string());
-        dbg!(&max_room);
 
         assert_eq!(Some("JJ"), max_room.as_ref().map(String::as_str));
 
         assert_eq!(v.current_flow(), 22);
 
+        let mut v = parse(SAMPLE);
+
         let path = v.path_between("AA", "HH");
-        assert_eq!(path.len(), 6);
+        assert_eq!(path.len(), 5);
+
+        dbg!(&path);
+        let actions = v.actions(&path);
+        dbg!(&actions);
+        assert_eq!(actions.len(), 8);
+
+        let mut total_flow = 0;
+        for action in actions.iter() {
+            v.do_action(action);
+            let current_flow = v.current_flow();
+            println!("current_flow = {current_flow}");
+            total_flow += current_flow;
+        }
+
+        assert_eq!(v.current_flow(), 45);
+        assert_eq!(total_flow, 177);
     }
 }
