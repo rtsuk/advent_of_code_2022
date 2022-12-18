@@ -1,5 +1,6 @@
 #![allow(unused)]
 use anyhow::Error;
+use itertools::Itertools;
 use pathfinding::prelude::*;
 use petgraph::{
     dot::{Config, Dot},
@@ -165,6 +166,13 @@ impl Volcano {
         total_pressure
     }
 
+    fn rooms_with_closed_valves(&self) -> Vec<Point> {
+        self.rooms
+            .values()
+            .filter_map(|r| (!r.open && r.flow > 0).then_some(letter_code_to_point(&r.name)))
+            .collect()
+    }
+
     fn paths_to_closed_valves(&self) -> Vec<(usize, Vec<Point>)> {
         let start = &self.player_room;
         let mut paths: Vec<_> = self
@@ -276,23 +284,13 @@ fn main() -> Result<(), Error> {
             Dot::with_config(&volcano.graph, &[Config::EdgeNoLabel])
         );
     } else {
-        dbg!(&volcano.player_room);
-        let targets = volcano.paths_to_closed_valves();
-        println!("targets = {:?}", targets);
-        for location in &targets[1].1 {
-            println!("move to location {:?}", location);
-            volcano.do_action(&Action::Move(point_to_letter_code(*location)));
-        }
-        volcano.do_action(&Action::Open);
-        let targets = volcano.paths_to_closed_valves();
-        println!("targets = {:?}", targets);
-        for location in &targets[1].1 {
-            println!("move to location {:?}", location);
-            volcano.do_action(&Action::Move(point_to_letter_code(*location)));
-        }
-        volcano.do_action(&Action::Open);
-        let targets = volcano.paths_to_closed_valves();
-        println!("targets = {:?}", targets);
+        let rooms = volcano.rooms_with_closed_valves();
+        println!("{} rooms, {:?}", rooms.len(), rooms);
+
+        // for one_permutation in rooms.iter().permutations(rooms.len()) {
+        //     println!("one_permutation, {:?}", one_permutation);
+        // }
+
     }
 
     Ok(())
@@ -395,5 +393,18 @@ mod test {
 
         assert_eq!(v.current_flow(), 45);
         assert_eq!(total_flow, 177);
+    }
+
+    #[test]
+    fn test_permute() {
+        let mut v = parse(SAMPLE);
+
+        let rooms = v.rooms_with_closed_valves();
+
+        let b: Vec<_> = rooms.iter().permutations(rooms.len()).collect();
+
+        println!("{} permutations, {:?}", b.len(), b);
+
+        todo!();
     }
 }
