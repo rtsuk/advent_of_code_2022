@@ -69,6 +69,7 @@ impl Room {
 }
 
 type RoomSet = BTreeMap<String, Room>;
+type FlowGraph = UnGraphMap<Point, ()>;
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -80,12 +81,12 @@ enum Action {
 #[derive(Default, Debug, Clone)]
 struct Volcano {
     rooms: RoomSet,
-    graph: UnGraphMap<Point, ()>,
+    graph: FlowGraph,
     time: usize,
     player_room: String,
 }
 
-fn successors(point: &Point, graph: &UnGraphMap<Point, ()>) -> Vec<Point> {
+fn successors(point: &Point, graph: &FlowGraph) -> Vec<Point> {
     graph.neighbors(*point).collect()
 }
 
@@ -100,7 +101,7 @@ impl Volcano {
         }
     }
 
-    fn make_graph(rooms: &RoomSet) -> UnGraphMap<Point, ()> {
+    fn make_graph(rooms: &RoomSet) -> FlowGraph {
         let edges: Vec<_> = rooms
             .values()
             .flat_map(|r| {
@@ -111,7 +112,7 @@ impl Volcano {
             })
             .collect();
 
-        UnGraphMap::<Point, ()>::from_edges(&edges)
+        FlowGraph::from_edges(&edges)
     }
 
     fn current_flow(&self) -> usize {
@@ -121,7 +122,6 @@ impl Volcano {
     fn path_between(&self, start: &str, end: &str) -> Vec<Point> {
         let start = letter_code_to_point(start);
         let end = letter_code_to_point(end);
-        println!("from {start:?} to {end:?}");
         let graph = self.graph.clone();
         let path = bfs(&start, |p| successors(p, &graph), |p| p == &end).unwrap();
         path[1..].to_vec()
@@ -152,6 +152,31 @@ impl Volcano {
             }
             Action::Idle => (),
         }
+    }
+
+    fn calculate_total_pressure(&mut self, actions: &[Action]) -> usize {
+        let mut total_pressure = 0;
+
+        for action in actions {
+            let current_flow = self.current_flow();
+            total_pressure += current_flow;
+            self.do_action(&action);
+        }
+        total_pressure
+    }
+
+    fn paths_to_closed_valves(&self) -> Vec<(usize, Vec<Point>)> {
+        let start = &self.player_room;
+        let mut paths: Vec<_> = self
+            .rooms
+            .values()
+            .filter_map(|r| (!r.open && r.flow > 0).then_some((r.name.to_string(), r.flow)))
+            .map(|(name, flow)| (flow, self.path_between(start, name.as_str())))
+            .map(|(flow, path)| (flow * (30 - path.len()), path))
+            .collect();
+        paths.sort_by_key(|(f, p)| *f);
+        paths.reverse();
+        paths
     }
 }
 
@@ -243,7 +268,7 @@ struct Opt {
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
-    let volcano = parse(if !opt.puzzle_input { SAMPLE } else { DATA });
+    let mut volcano = parse(if !opt.puzzle_input { SAMPLE } else { DATA });
 
     if opt.graph {
         println!(
@@ -251,7 +276,23 @@ fn main() -> Result<(), Error> {
             Dot::with_config(&volcano.graph, &[Config::EdgeNoLabel])
         );
     } else {
-        todo!();
+        dbg!(&volcano.player_room);
+        let targets = volcano.paths_to_closed_valves();
+        println!("targets = {:?}", targets);
+        for location in &targets[1].1 {
+            println!("move to location {:?}", location);
+            volcano.do_action(&Action::Move(point_to_letter_code(*location)));
+        }
+        volcano.do_action(&Action::Open);
+        let targets = volcano.paths_to_closed_valves();
+        println!("targets = {:?}", targets);
+        for location in &targets[1].1 {
+            println!("move to location {:?}", location);
+            volcano.do_action(&Action::Move(point_to_letter_code(*location)));
+        }
+        volcano.do_action(&Action::Open);
+        let targets = volcano.paths_to_closed_valves();
+        println!("targets = {:?}", targets);
     }
 
     Ok(())
@@ -275,34 +316,34 @@ mod test {
             .map(ExampleStep::from)
             .collect();
 
-            assert_eq!(example_steps.len(), 30);
-            assert_eq!(example_steps[0].action, Action::Move("DD".to_string()));
-            assert_eq!(example_steps[0].pressure, 0);
-            assert_eq!(example_steps[0].open_valves.len(), 0);
+        assert_eq!(example_steps.len(), 30);
+        assert_eq!(example_steps[0].action, Action::Move("DD".to_string()));
+        assert_eq!(example_steps[0].pressure, 0);
+        assert_eq!(example_steps[0].open_valves.len(), 0);
 
-            let middle_step = &example_steps[17];
-            assert_eq!(middle_step.action, Action::Move("GG".to_string()));
-            assert_eq!(middle_step.pressure, 76);
-            assert_eq!(middle_step.open_valves.len(), 4);
+        let middle_step = &example_steps[17];
+        assert_eq!(middle_step.action, Action::Move("GG".to_string()));
+        assert_eq!(middle_step.pressure, 76);
+        assert_eq!(middle_step.open_valves.len(), 4);
 
-            let last_step = &example_steps[29];
-            assert_eq!(last_step.action, Action::Idle);
-            assert_eq!(last_step.pressure, 81);
-            assert_eq!(last_step.open_valves.len(), 6);
+        let last_step = &example_steps[29];
+        assert_eq!(last_step.action, Action::Idle);
+        assert_eq!(last_step.pressure, 81);
+        assert_eq!(last_step.open_valves.len(), 6);
 
-            let mut v = parse(SAMPLE);
+        let mut v = parse(SAMPLE);
 
-            let mut total_pressure = 0;
+        let mut total_pressure = 0;
 
-            for step in example_steps.iter() {
-                println!("doing step {:?}", step);
-                let current_flow = v.current_flow();
-                total_pressure += current_flow;
-                assert_eq!(step.pressure, v.current_flow());
-                v.do_action(&step.action);
-            }
+        for step in example_steps.iter() {
+            println!("doing step {:?}", step);
+            let current_flow = v.current_flow();
+            total_pressure += current_flow;
+            assert_eq!(step.pressure, v.current_flow());
+            v.do_action(&step.action);
+        }
 
-            assert_eq!(total_pressure, 1651);
+        assert_eq!(total_pressure, 1651);
     }
 
     #[test]
