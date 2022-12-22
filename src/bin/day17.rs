@@ -54,11 +54,11 @@ type BlockSet = HashSet<Point>;
 
 const MAX_X: isize = 7;
 
-fn block_collides_with_wall(p: &&Point) -> bool {
+fn block_collides_with_wall(p: &Point) -> bool {
     p.x < 0 || p.x >= MAX_X
 }
 
-fn block_collides_with_floor(p: &&Point) -> bool {
+fn block_collides_with_floor(p: &Point) -> bool {
     p.y < 0
 }
 
@@ -138,15 +138,15 @@ impl Shape {
     }
 
     fn collides_with_wall(&self) -> bool {
-        self.blocks.iter().find(block_collides_with_wall) != None
+        self.blocks.iter().any(block_collides_with_wall)
     }
 
     fn collides_with_floor(&self) -> bool {
-        self.blocks.iter().find(block_collides_with_floor) != None
+        self.blocks.iter().any(block_collides_with_floor)
     }
 
     fn collides_with(&self, block_set: &BlockSet) -> bool {
-        self.blocks.iter().find(|p| block_set.contains(p)) != None
+        self.blocks.iter().any(|p| block_set.contains(p))
     }
 
     fn bounding_box(&self) -> Box {
@@ -164,7 +164,7 @@ fn parse(s: &str) -> Jets {
 
 fn render(block_set: &BlockSet, shape_set: &BlockSet) {
     let total_box = Box::from_points(block_set.iter().chain(shape_set.iter()));
-    println!("total_box = {:?}", total_box);
+    println!("total_box = {total_box:?}");
 
     for y in (0..(total_box.max.y + 1)).rev() {
         let s = (0..MAX_X)
@@ -179,7 +179,7 @@ fn render(block_set: &BlockSet, shape_set: &BlockSet) {
                 }
             })
             .collect::<String>();
-        println!("|{}|", s);
+        println!("|{s}|");
     }
 }
 
@@ -240,11 +240,11 @@ fn main() -> Result<(), Error> {
 
     render(&block_set, &HashSet::new());
 
-    println!("bbox = {:?}", bbox);
+    println!("bbox = {bbox:?}");
 
     // 2568 is too low
     // 2894 is too low
-	// 3171 is too low
+    // 3171 is too low
 
     Ok(())
 }

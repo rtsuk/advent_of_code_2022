@@ -331,7 +331,7 @@ fn solver_solve(v: &Volcano) -> usize {
         let new_solvers: Vec<_> = solvers
             .iter_mut()
             .enumerate()
-            .flat_map(|(index, solver)| solver.step(index, time, &v).unwrap_or_default())
+            .flat_map(|(index, solver)| solver.step(index, time, v).unwrap_or_default())
             .collect();
 
         solvers.extend(new_solvers);
@@ -344,7 +344,7 @@ fn solver_solve(v: &Volcano) -> usize {
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "day16", about = "Proboscidea Volcanium")]
+#[structopt(name = "day16", about = "Proboscidea Volcanium ")]
 struct Opt {
     /// Use puzzle input instead of the sample
     #[structopt(short, long)]
@@ -374,33 +374,31 @@ fn main() -> Result<(), Error> {
                 &|_, nr| format!("label = \"{}\"", nr.weight()),
             ),
         );
+    } else if opt.permutation {
+        let rooms = volcano.rooms_with_valves();
+        println!("{} rooms, {:?}", rooms.len(), rooms);
+
+        let start_room = RoomId::new("AA");
+
+        let mut solutions: Vec<_> = rooms
+            .iter()
+            .permutations(rooms.len().min(6))
+            .map(|path| {
+                (
+                    solve(&volcano, &start_room, path.as_slice(), TIME_LIMIT),
+                    path.clone(),
+                )
+            })
+            .collect();
+
+        solutions.sort_by_key(|s| s.0);
+
+        solutions.reverse();
+
+        println!("total pressure = {}", solutions[0].0);
     } else {
-        if opt.permutation {
-            let rooms = volcano.rooms_with_valves();
-            println!("{} rooms, {:?}", rooms.len(), rooms);
-
-            let start_room = RoomId::new("AA");
-
-            let mut solutions: Vec<_> = rooms
-                .iter()
-                .permutations(rooms.len().min(6))
-                .map(|path| {
-                    (
-                        solve(&volcano, &start_room, path.as_slice(), TIME_LIMIT),
-                        path.clone(),
-                    )
-                })
-                .collect();
-
-            solutions.sort_by_key(|s| s.0);
-
-            solutions.reverse();
-
-            println!("total pressure = {}", solutions[0].0);
-        } else {
-            let total_pressure = solver_solve(&volcano);
-            println!("total pressure = {total_pressure}");
-        }
+        let total_pressure = solver_solve(&volcano);
+        println!("total pressure = {total_pressure}");
     }
 
     Ok(())
