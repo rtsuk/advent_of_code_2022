@@ -17,6 +17,10 @@ struct Opt {
     /// Run step by step
     #[structopt(short, long)]
     interactive: bool,
+
+    /// Limit
+    #[structopt(short, long, default_value = "2022")]
+    limit: usize,
 }
 
 #[derive(Debug, Clone, Copy)]

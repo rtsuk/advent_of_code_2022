@@ -189,7 +189,6 @@ fn main() -> Result<(), Error> {
 
     let blueprints = parse(if opt.puzzle_input { DATA } else { SAMPLE });
 
-
     let bp = &blueprints[0];
 
     let mut robots = Robots {
@@ -199,15 +198,14 @@ fn main() -> Result<(), Error> {
     let mut resources = Resources::default();
 
     for time in 1..=24 {
-		println!("#### time {time}: robots = {robots:#?} ");
+        println!("#### time {time}: robots = {robots:#?} ");
         resources += resources_made(&robots);
-		println!("resources = {resources:#?} ");
+        println!("resources = {resources:#?} ");
         let (new_robots, remainder) = legal_order(resources, &bp);
-		println!("new_robots = {new_robots:#?}");
-		println!("remainder = {remainder:#?}");
+        println!("new_robots = {new_robots:#?}");
+        println!("remainder = {remainder:#?}");
         robots += new_robots;
         resources = remainder;
-		
     }
 
     Ok(())
