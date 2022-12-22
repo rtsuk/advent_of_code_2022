@@ -88,7 +88,7 @@ fn main() -> Result<(), Error> {
         for y in bbox.min.y..bbox.max.y {
             for x in bbox.min.x..bbox.max.x {
                 let p = point3(x, y, z);
-                if count_neighbors(&p, &points) == 6 {
+                if !points.contains(&p) && count_neighbors(&p, &points) == 6 {
                     println!("bubble = {p:?}");
                     bubbles += 1;
                 }
