@@ -130,7 +130,7 @@ impl Volcano {
         (value, path)
     }
 
-	#[cfg(test)]
+    #[cfg(test)]
     fn path_between_str(&self, start: &str, end: &str) -> Vec<RoomId> {
         let start = RoomId::new(start);
         let end = RoomId::new(end);
@@ -327,7 +327,7 @@ fn solver_solve(v: &Volcano) -> usize {
         .collect();
 
     for time in 1..=TIME_LIMIT {
-		println!("time = {time}");
+        println!("time = {time}");
         let new_solvers: Vec<_> = solvers
             .iter_mut()
             .enumerate()
@@ -344,7 +344,7 @@ fn solver_solve(v: &Volcano) -> usize {
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "day15", about = "Beacon Exclusion Zone")]
+#[structopt(name = "day16", about = "Proboscidea Volcanium")]
 struct Opt {
     /// Use puzzle input instead of the sample
     #[structopt(short, long)]
