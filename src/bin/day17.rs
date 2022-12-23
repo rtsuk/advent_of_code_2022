@@ -20,6 +20,7 @@ struct Opt {
 
     /// Limit
     #[structopt(short, long, default_value = "2022")]
+    #[allow(unused)]
     limit: usize,
 }
 
