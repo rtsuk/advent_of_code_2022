@@ -64,9 +64,9 @@ fn add_children(
 ) {
     let exp_index = exp_map
         .get(identifier)
-        .expect(&format!("identifier {}", identifier));
+        .unwrap_or_else(|| panic!("identifier {identifier}"));
     let my_node = tree
-        .insert(Node::new(*exp_index), UnderNode(&parent))
+        .insert(Node::new(*exp_index), UnderNode(parent))
         .unwrap();
 
     for reffed in list[*exp_index].references() {
@@ -111,7 +111,7 @@ fn solve_part_1(expression_list: ExpressionList, order: Vec<usize>) -> isize {
 }
 
 fn solve_part_2(_expression_list: ExpressionList, _order: Vec<usize>) -> isize {
-	todo!();
+    todo!();
 }
 
 fn main() -> Result<(), Error> {
