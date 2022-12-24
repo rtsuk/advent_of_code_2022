@@ -688,7 +688,7 @@ mod test {
             }
             let new_states: StateSet = states
                 .iter()
-                .flat_map(|state| state.step(bp0, time, TIME_LIMIT))
+                .flat_map(|state| state.step(bp0, time, 24))
                 .collect();
             states = new_states;
         }
