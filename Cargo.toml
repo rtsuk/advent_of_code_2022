@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 console = "0.15.2"
+convert-base = "1.1.2"
 enum-iterator = "1.2.0"
 euclid = { version = "0.22.7", features = ["serde"] }
 evalexpr = "8.1.0"

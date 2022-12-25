@@ -357,8 +357,8 @@ fn main() -> Result<(), Error> {
 mod test {
     use super::*;
 
-	const EXPECTED_5: &str = include_str!("../../data/day23_ex.txt");
-	const EXPECTED_10: &str = r#"xxx
+    const EXPECTED_5: &str = include_str!("../../data/day23_ex.txt");
+    const EXPECTED_10: &str = r#"xxx
 	.......#......
 	...........#..
 	..#.#..#......
@@ -374,17 +374,17 @@ mod test {
 
 	"#;
 
-	fn parse_expected(s: &str) -> Vec<Vec<Elf>> {
-	    let mut exp = vec![];
-	    for chunk in s.split("\n\n") {
-	        let mut elves = vec![];
-	        for (y, line) in chunk.lines().enumerate().skip(1) {
-	            elves.extend(handle_line((y as isize - 3, line), 3));
-	        }
-	        exp.push(elves);
-	    }
-	    exp
-	}
+    fn parse_expected(s: &str) -> Vec<Vec<Elf>> {
+        let mut exp = vec![];
+        for chunk in s.split("\n\n") {
+            let mut elves = vec![];
+            for (y, line) in chunk.lines().enumerate().skip(1) {
+                elves.extend(handle_line((y as isize - 3, line), 3));
+            }
+            exp.push(elves);
+        }
+        exp
+    }
 
     #[test]
     fn test_parse() {
@@ -414,4 +414,3 @@ mod test {
         assert_eq!(rounds, 20);
     }
 }
-
