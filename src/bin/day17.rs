@@ -199,7 +199,7 @@ fn main() -> Result<(), Error> {
     let mut starting_y = 0;
     let mut block_set: BlockSet = HashSet::new();
     let mut jet_index = 0;
-    for i in 0..2023 {
+    for i in 0..=opt.limit {
         let mut shape = Shape::shape_for(i);
         let v = vec2(2, starting_y + 3);
         shape = shape.translate(v);
@@ -246,6 +246,8 @@ fn main() -> Result<(), Error> {
     render(&block_set, &HashSet::new());
 
     println!("bbox = {bbox:?}");
+
+    println!("height = {}", bbox.max.y + 1);
 
     // 2568 is too low
     // 2894 is too low

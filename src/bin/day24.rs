@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 use anyhow::Error;
 use enum_iterator::Sequence;
-use euclid::{point2, vec2};
+use euclid::{point2, size2, vec2};
 use structopt::StructOpt;
 
 type Coord = i64;
 type Point = euclid::default::Point2D<Coord>;
+type UPoint = euclid::default::Point2D<Coord>;
 type Box = euclid::default::Box2D<Coord>;
 type Vector = euclid::default::Vector2D<Coord>;
 type Rect = euclid::default::Rect<Coord>;
@@ -77,10 +78,20 @@ impl From<char> for MapCell {
     }
 }
 
+fn blizzards_from_row((y, cells): (usize, &MapRow)) -> Vec<Blizzard> {
+    cells
+        .iter()
+        .enumerate()
+        .map(|(x, cells)| (point2(x, y).to_i64(), cells))
+        .filter_map(Blizzard::from_cell)
+        .collect()
+}
+
 type MapRow = Vec<MapCell>;
 
 #[derive(Debug)]
 struct Map {
+    bounds: Rect,
     rows: Vec<MapRow>,
     entrance: Point,
     exit: Point,
@@ -101,7 +112,12 @@ impl Map {
             .find(|(_index, cell)| **cell == MapCell::Open)
             .expect("exit")
             .0;
+        let bounds = Rect::new(
+            point2(1, 1),
+            size2(rows[0].len() - 2, rows.len() - 2).to_i64(),
+        );
         Self {
+            bounds,
             rows,
             entrance: point2(entrance as Coord, 0),
             exit: point2(exit as Coord, last_row as Coord),
@@ -125,6 +141,31 @@ impl Map {
         }
 
         row[p_u.x]
+    }
+
+    fn blizzard_starts(&self) -> Vec<Blizzard> {
+        self.rows
+            .iter()
+            .enumerate()
+            .flat_map(blizzards_from_row)
+            .collect()
+    }
+}
+
+struct Blizzard {
+    position: Point,
+    direction: Direction,
+}
+
+impl Blizzard {
+    fn from_cell((position, cell): (UPoint, &MapCell)) -> Option<Blizzard> {
+        match *cell {
+            MapCell::Blizzard(direction) => Some(Blizzard {
+                position,
+                direction,
+            }),
+            _ => None,
+        }
     }
 }
 
@@ -173,8 +214,16 @@ mod test {
     #[test]
     fn test_parse() {
         let map = parse(SAMPLE);
-        dbg!(&map);
-        todo!();
+		assert_eq!(map.bounds.size, size2(5,5));
+		assert_eq!(map.bounds.origin, point2(1,1));
+		
+		let blizzards = map.blizzard_starts();
+		assert_eq!(blizzards.len(), 2);
+		
+		assert_eq!(blizzards[0].position, point2(1,2));
+		assert_eq!(blizzards[0].direction, Direction::East);
+		assert_eq!(blizzards[1].position, point2(4,4));
+		assert_eq!(blizzards[1].direction, Direction::South);
     }
 
     #[test]
