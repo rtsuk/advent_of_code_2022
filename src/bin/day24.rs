@@ -1,7 +1,11 @@
 #![allow(dead_code)]
 use anyhow::Error;
-use enum_iterator::Sequence;
+use enum_iterator::{all, Sequence};
 use euclid::{point2, size2, vec2};
+use pathfinding::prelude::*;
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 use structopt::StructOpt;
 
 type Coord = i64;
@@ -11,16 +15,15 @@ type Box = euclid::default::Box2D<Coord>;
 type Vector = euclid::default::Vector2D<Coord>;
 type Rect = euclid::default::Rect<Coord>;
 
-const DATA: &str = include_str!("../../data/day23.txt");
-const SAMPLE: &str = r#"#.#####
-#.....#
-#>....#
-#.....#
-#...v.#
-#.....#
-#####.#"#;
+const DATA: &str = include_str!("../../data/day24.txt");
+const SAMPLE: &str = r#"#.######
+#>>.<^<#
+#.<..<<#
+#>v.><>#
+#<^v^^>#
+######.#"#;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Sequence)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Sequence, Hash)]
 #[repr(usize)]
 enum Direction {
     North,
@@ -152,6 +155,7 @@ impl Map {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Blizzard {
     position: Point,
     direction: Direction,
@@ -167,6 +171,25 @@ impl Blizzard {
             _ => None,
         }
     }
+
+    fn new_pos(&self, map: &Map) -> Self {
+        let v: Vector = self.direction.into();
+        let position = self.position + v;
+        let position = if map.cell_at(&position) == MapCell::Wall {
+            match self.direction {
+                Direction::North => point2(position.x, map.bounds.max_y() - 1),
+                Direction::South => point2(position.x, map.bounds.min_y()),
+                Direction::East => point2(map.bounds.min_x(), position.y),
+                Direction::West => point2(map.bounds.max_x() - 1, position.y),
+            }
+        } else {
+            position
+        };
+        Self {
+            direction: self.direction,
+            position,
+        }
+    }
 }
 
 fn parse(s: &str) -> Map {
@@ -174,16 +197,187 @@ fn parse(s: &str) -> Map {
         .lines()
         .map(|s| s.chars().map(MapCell::from).collect::<Vec<_>>())
         .collect();
-    println!("rows = {rows:?}");
     Map::new(rows)
 }
 
-fn solve_part_1() -> usize {
-    todo!();
+#[derive(Debug, Clone)]
+struct BlizzardMap {
+    blizzards: Vec<Blizzard>,
+    blizzard_locations: HashSet<Point>,
 }
 
-fn solve_part_2() -> usize {
-    todo!();
+impl BlizzardMap {
+    fn char_for_point(&self, p: &Point) -> Option<char> {
+        let blizzards: Vec<char> = self
+            .blizzards
+            .iter()
+            .filter_map(|b| (b.position == *p).then_some(b.direction.into()))
+            .collect();
+
+        match blizzards.len() {
+            0 => None,
+            1 => Some(blizzards[0]),
+            _ => Some((b'0' + blizzards.len() as u8) as char),
+        }
+    }
+
+    fn new(map: &Map) -> Self {
+        let blizzards = map.blizzard_starts();
+        let blizzard_locations = blizzards.iter().map(|b| b.position).collect();
+        Self {
+            blizzards,
+            blizzard_locations,
+        }
+    }
+
+    fn new_blizzards(&self, map: &Map) -> Self {
+        let blizzards: Vec<Blizzard> = self.blizzards.iter().map(|b| b.new_pos(map)).collect();
+        let blizzard_locations = blizzards.iter().map(|b| b.position).collect();
+        Self {
+            blizzards,
+            blizzard_locations,
+        }
+    }
+
+    fn unique_list(&self, map: &Map) -> Vec<Self> {
+        let mut blizzards = self.clone();
+        let mut set = HashSet::new();
+        let mut list = vec![blizzards.clone()];
+        set.insert(blizzards.clone());
+        for _ in 0.. {
+            let new_blizzards = blizzards.new_blizzards(map);
+            if set.contains(&new_blizzards) {
+                break;
+            }
+            set.insert(new_blizzards.clone());
+            list.push(new_blizzards.clone());
+            blizzards = new_blizzards;
+        }
+        list
+    }
+}
+
+impl Hash for BlizzardMap {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for b in self.blizzards.iter() {
+            b.hash(state);
+        }
+    }
+}
+
+impl PartialEq for BlizzardMap {
+    fn eq(&self, o: &BlizzardMap) -> bool {
+        self.blizzards.eq(&o.blizzards)
+    }
+}
+
+impl Eq for BlizzardMap {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct MapState {
+    time: usize,
+    blizzards: Rc<Vec<BlizzardMap>>,
+    position: Point,
+    target: Point,
+}
+
+impl MapState {
+    fn render(&self, map: &Map) {
+        let blizzards = &self.blizzards[self.time % self.blizzards.len()];
+        for y in 0..map.rows.len() as Coord {
+            let mut s = String::new();
+            let row = &map.rows[y as usize];
+            for x in 0..row.len() as Coord {
+                let pt = point2(x, y);
+                let c = if pt == self.position {
+                    if blizzards.blizzard_locations.contains(&pt) {
+                        '?'
+                    } else {
+                        'E'
+                    }
+                } else if let Some(c) = blizzards.char_for_point(&pt) {
+                    c
+                } else if map.cell_at(&pt) == MapCell::Wall {
+                    '#'
+                } else {
+                    '.'
+                };
+                s.push(c);
+            }
+            println!("{s}");
+        }
+        println!("\n");
+    }
+}
+
+fn taxicab_distance(p: Point, q: Point) -> Coord {
+    let p2 = (p - q).abs();
+    p2.x + p2.y
+}
+
+fn successors(state: &MapState, map: &Map) -> Vec<(MapState, usize)> {
+    let new_time = state.time + 1;
+    if new_time % 10 == 0 {
+        println!(
+            "{new_time} {:?} {}",
+            state.position,
+            taxicab_distance(state.position, state.target)
+        );
+    }
+    let new_blizzards = &state.blizzards[new_time % state.blizzards.len()];
+    all::<Direction>()
+        .map(Vector::from)
+        .chain(std::iter::once(vec2(0, 0)))
+        .filter_map(|v| {
+            let new_p = state.position + v;
+            let map_cell = map.cell_at(&new_p);
+            // println!("new_p = {ne	w_p:?}");
+            // println!("map_cell = {map_cell:?}");
+            // println!("no_blizzard = {no_blizzard}");
+            (map_cell != MapCell::Wall && !new_blizzards.blizzard_locations.contains(&new_p))
+                .then_some((
+                    MapState {
+                        time: new_time,
+                        position: new_p,
+                        blizzards: state.blizzards.clone(),
+                        target: state.target,
+                    },
+                    1,
+                ))
+        })
+        .collect::<Vec<_>>()
+}
+
+fn solve(start: Point, end: Point, map: &Map, start_time: usize) -> usize {
+    let blizzards = BlizzardMap::new(map);
+    let list = blizzards.unique_list(map);
+    let initial_state = MapState {
+        blizzards: Rc::new(list),
+        time: start_time,
+        position: start,
+        target: end,
+    };
+    let path = astar(
+        &initial_state,
+        |p| successors(p, map),
+        |p| taxicab_distance(p.position, end) as usize,
+        |state| state.position == state.target,
+    )
+    .unwrap();
+
+    path.0.len() - 1
+}
+
+fn solve_part_1(map: &Map) -> usize {
+    solve(map.entrance, map.exit, map, 0)
+}
+
+fn solve_part_2(map: &Map, start_time: usize) -> usize {
+    let p2_1 = solve(map.exit, map.entrance, map, start_time);
+    println!("p2_1 = {p2_1}");
+    let p2_2 = solve(map.entrance, map.exit, map, start_time + p2_1);
+    println!("p2_2 = {p2_2}");
+    p2_1 + p2_2
 }
 
 #[derive(Debug, StructOpt)]
@@ -192,17 +386,21 @@ struct Opt {
     /// Use puzzle input instead of the sample
     #[structopt(short, long)]
     puzzle_input: bool,
+
+    /// Use presolved part 1
+    #[structopt(long)]
+    presolved: Option<usize>,
 }
 
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
-    let _ = parse(if opt.puzzle_input { DATA } else { SAMPLE });
+    let map = parse(if opt.puzzle_input { DATA } else { SAMPLE });
 
-    let p1 = solve_part_1();
+    let p1 = opt.presolved.unwrap_or_else(|| solve_part_1(&map));
     println!("part 1  = {p1}");
 
-    println!("part 2  = {}", solve_part_2());
+    println!("part 2  = {}", p1 + solve_part_2(&map, p1));
 
     Ok(())
 }
@@ -214,21 +412,39 @@ mod test {
     #[test]
     fn test_parse() {
         let map = parse(SAMPLE);
-		assert_eq!(map.bounds.size, size2(5,5));
-		assert_eq!(map.bounds.origin, point2(1,1));
-		
-		let blizzards = map.blizzard_starts();
-		assert_eq!(blizzards.len(), 2);
-		
-		assert_eq!(blizzards[0].position, point2(1,2));
-		assert_eq!(blizzards[0].direction, Direction::East);
-		assert_eq!(blizzards[1].position, point2(4,4));
-		assert_eq!(blizzards[1].direction, Direction::South);
+        assert_eq!(map.bounds.size, size2(6, 4));
+        assert_eq!(map.bounds.origin, point2(1, 1));
+
+        let blizzards = map.blizzard_starts();
+        assert_eq!(blizzards.len(), 19);
+
+        assert_eq!(blizzards[0].position, point2(1, 1));
+        assert_eq!(blizzards[0].direction, Direction::East);
+        assert_eq!(blizzards[1].position, point2(2, 1));
+        assert_eq!(blizzards[1].direction, Direction::East);
     }
 
     #[test]
-    #[ignore]
-    fn test_part_1() {}
+    fn test_cycle() {
+        println!("sample");
+        let map = parse(SAMPLE);
+        let blizzards = BlizzardMap::new(&map);
+        let list = blizzards.unique_list(&map);
+        assert_eq!(list.len(), 12);
+
+        println!("data");
+        let map = parse(DATA);
+        let blizzards = BlizzardMap::new(&map);
+        let list = blizzards.unique_list(&map);
+        assert_eq!(list.len(), 600);
+    }
+
+    #[test]
+    fn test_part_1() {
+        let map = parse(SAMPLE);
+        let p1 = solve_part_1(&map);
+        assert_eq!(p1, 18);
+    }
 
     #[test]
     #[ignore]
