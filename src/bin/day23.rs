@@ -51,9 +51,9 @@ impl Direction {
     }
 }
 
-impl Into<Vector> for Direction {
-    fn into(self) -> Vector {
-        match self {
+impl From<Direction> for Vector {
+    fn from(val: Direction) -> Self {
+        match val {
             Direction::North => vec2(0, -1),
             Direction::East => vec2(1, 0),
             Direction::South => vec2(0, 1),
@@ -62,9 +62,9 @@ impl Into<Vector> for Direction {
     }
 }
 
-impl Into<char> for Direction {
-    fn into(self) -> char {
-        match self {
+impl From<Direction> for char {
+    fn from(val: Direction) -> Self {
+        match val {
             Direction::North => '^',
             Direction::East => '>',
             Direction::South => 'v',
@@ -235,7 +235,7 @@ impl World {
     }
 }
 
-fn render_elves(elves: &Vec<Elf>, proposals: &ProposalList) {
+fn render_elves(elves: &[Elf], proposals: &ProposalList) {
     let bbox = Box::from_points(elves.iter().map(|e| e.position));
     let elf_map: HashMap<_, _> = elves
         .iter()
@@ -257,7 +257,7 @@ fn render_elves(elves: &Vec<Elf>, proposals: &ProposalList) {
             };
             s.push(c);
         }
-        println!("{}", s);
+        println!("{s}");
     }
 }
 
@@ -346,7 +346,7 @@ fn main() -> Result<(), Error> {
     let mut world2 = world.clone();
 
     let p1 = solve_part_1(&mut world, None, false);
-    println!("part 1 password = {}", p1);
+    println!("part 1 password = {p1}");
 
     println!("part 2 password = {}", solve_part_2(&mut world2));
 

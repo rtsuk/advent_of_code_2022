@@ -252,9 +252,9 @@ impl Direction {
     }
 }
 
-impl Into<Vector> for Direction {
-    fn into(self) -> Vector {
-        match self {
+impl From<Direction> for Vector {
+    fn from(val: Direction) -> Self {
+        match val {
             Direction::North => vec2(0, -1),
             Direction::East => vec2(1, 0),
             Direction::South => vec2(0, 1),

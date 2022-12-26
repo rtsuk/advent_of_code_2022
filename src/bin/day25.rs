@@ -55,20 +55,7 @@ fn parse_snafu(s: &str) -> isize {
     value
 }
 
-fn to_snafu_string(mut v: isize) -> String {
-    let mut snafu_digits = Vec::new();
-    while v > 0 {
-        let amount_to_encode = v % 5;
-        snafu_digits.push(to_snafu_digit(amount_to_encode));
-        if amount_to_encode >= 3 {
-            v += 5
-        }
-        v /= 5;
-    }
-    snafu_digits.iter().rev().collect::<String>()
-}
-
-fn to_snafu_string2(v: isize) -> String {
+fn to_snafu_string(v: isize) -> String {
     let snafu_digits: Vec<char> = std::iter::repeat(())
         .scan(v, |current_value, _| {
             let mut v = *current_value;
@@ -93,10 +80,10 @@ fn parse(s: &str) -> Vec<String> {
     s.lines().map(str::to_string).collect()
 }
 
-fn solve_part_1(s: &Vec<String>) -> String {
+fn solve_part_1(s: &[String]) -> String {
     let values: Vec<isize> = s.iter().map(String::as_str).map(parse_snafu).collect();
     let sum: isize = values.iter().sum();
-    to_snafu_string2(sum)
+    to_snafu_string(sum)
 }
 
 #[derive(Debug, StructOpt)]
@@ -113,7 +100,7 @@ fn main() -> Result<(), Error> {
     let value_list = parse(if opt.puzzle_input { DATA } else { SAMPLE });
 
     let p1 = solve_part_1(&value_list);
-    println!("part 1  = {}", p1);
+    println!("part 1  = {p1}");
 
     Ok(())
 }
@@ -138,6 +125,6 @@ mod test {
         let sum: isize = values.iter().sum();
         assert_eq!(sum, 4890);
 
-        assert_eq!(to_snafu_string2(sum).as_str(), "2=-1=0");
+        assert_eq!(to_snafu_string(sum).as_str(), "2=-1=0");
     }
 }
