@@ -72,7 +72,12 @@ fn taxicab_distance(p: &Point, q: &Point) -> Coord {
     p2.x + p2.y + p.z
 }
 
-fn successors(pt: &Point, end: &Point, search_box: &Box3D, points: &PointSet) -> Vec<(Point, usize)> {
+fn successors(
+    pt: &Point,
+    end: &Point,
+    search_box: &Box3D,
+    points: &PointSet,
+) -> Vec<(Point, usize)> {
     let deltas = [
         vec3(-1, 0, 0),
         vec3(1, 0, 0),
@@ -85,7 +90,7 @@ fn successors(pt: &Point, end: &Point, search_box: &Box3D, points: &PointSet) ->
         .iter()
         .map(|v| *pt + *v)
         .filter_map(|pt| {
-            (search_box.contains(pt) && (pt == *end || points.contains(&pt) == false)).then_some(pt)
+            (search_box.contains(pt) && (pt == *end || !points.contains(&pt))).then_some(pt)
         })
         .map(|pt| (pt, 1))
         .collect();
@@ -100,7 +105,7 @@ fn has_path(start: Point, end: &Point, search_box: &Box3D, points: &PointSet) ->
     astar(
         &start,
         |p| successors(p, end, search_box, points),
-        |p| taxicab_distance(p, &end) as usize,
+        |p| taxicab_distance(p, end) as usize,
         |p| *p == *end,
     )
     .is_some()
@@ -140,20 +145,19 @@ fn main() -> Result<(), Error> {
     println!("bubbles = {}", bubbles.len());
 
     let start = point3(-1, -1, -1);
-	bubbles.retain(|b| !has_path(start, b, &search_box, &points));
-	
-	let mut points2 = points.clone();
-	points2.extend(bubbles.iter());
+    bubbles.retain(|b| !has_path(start, b, &search_box, &points));
+
+    let mut points2 = points.clone();
+    points2.extend(bubbles.iter());
 
     println!("bubbles = {}", bubbles.len());
 
-	faces = 0;
+    faces = 0;
     for p in points2.iter() {
         faces += 6 - count_neighbors(p, &points2);
     }
-	
+
     println!("faces = {faces}");
-	
 
     Ok(())
 }
